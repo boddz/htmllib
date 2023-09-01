@@ -228,7 +228,7 @@ class Lexer:
                 ord(char) >= ord("0") and ord(char) <= ord("9"):  # All identifiers [aA-zZ, 0-9].
                 identifier = self.__eat_chars()
                 self.tokens.append(Token(TokenTypes.ID, identifier, cursor))
-            else: pass
+            else: self.cursor.increment()
 
         return self.tokens
 
