@@ -10,7 +10,7 @@ Take generated tokens list, run validation checks and convert into nodes that re
 
 from __future__ import annotations
 
-import lexer
+from .lexer import Cursor, TokenTypes, Lexer
 
 from dataclasses import dataclass
 
@@ -23,8 +23,20 @@ class HTMLOpeningTagNode:
     tag_name: str
     attributes: dict
     content: str
-    cursor_start: lexer.Cursor
-    cursor_end: lexer.Cursor
+    cursor_start: Cursor
+    cursor_end: Cursor
+
+
+@dataclass
+class HTMLSelfClosingTagNode:
+    """
+    Represents a self closing HTML tag.
+    """
+    tag_name: str
+    attributes: dict
+    content: str
+    cursor_start: Cursor
+    cursor_end: Cursor
 
 
 @dataclass
@@ -33,8 +45,8 @@ class HTMLClosingTagNode:
     Represents a closing HTML tag.
     """
     tag_name: str
-    cursor_start: lexer.Cursor
-    cursor_end: lexer.Cursor
+    cursor_start: Cursor
+    cursor_end: Cursor
 
 
 @dataclass
@@ -43,8 +55,8 @@ class HTMLDoctypeOrCommNode:
     Represents other HTML tags such as comments and doctype declarations.
     """
     text_raw: str
-    cursor_start: lexer.Cursor
-    cursor_end: lexer.Cursor
+    cursor_start: Cursor
+    cursor_end: Cursor
 
 
 @dataclass
@@ -53,7 +65,8 @@ class HTMLErrorNode:
     Represents an erroneous HTML tag (if validation rules fail during parse for valid tags).
     """
     message: str
-    cursor: lexer.Cursor
+    cursor_start: Cursor
+    cursor_end: Cursor
     exception: Exception
     extra: str
 
@@ -77,7 +90,7 @@ class Parser:
     """
     def __init__(self, html: str, /) -> None:
         self.__html_raw = html
-        self.__lexer = lexer.Lexer(html)
+        self.__lexer = Lexer(html)
         self.__lexed = self.__lexer.lex()
         self.__index = 0
         self.__tags_list = []
@@ -104,14 +117,14 @@ class Parser:
         return self.__lexed
 
     @property
-    def curr_token(self) -> lexer.Token:
+    def curr_token(self) -> Token:
         """
         The current token in the list.
         """
         return self.lexed[self.__index]
 
     @property
-    def __next_token(self) -> lexer.Token:
+    def __next_token(self) -> Token:
         """
         **For internal use only**
         
@@ -120,47 +133,72 @@ class Parser:
         self.__index += 1 if self.__index < len(self.lexed) - 1 else 0
         return self.lexed[self.__index]
 
-    def parse_tokens_to_node_list(self, *, debug: bool=False) -> bool | None:
-        while self.curr_token.type is not lexer.TokenTypes.EOF:
+    def parse_tokens_to_node_list(self, *, debug: bool=False) -> list:
+        """
+        Converts tokens into HTML node classes.
+
+        --------
+        Supports
+        --------
+
+        * Opening tags                             : ``<html>``
+        * Opening tags (w attrs/ multi attrs)      : ``<html lang="en">``
+        * Self closing tags                        : ``<img/>``
+        * Self closing tags (w attrs/ multi attrs) : ``<img src="null" alt="an example"/>``
+        * Closing tags                             : ``</html>``
+
+        Any thing that does not match this criteria will instead be stored as an error node, with a message as to what
+        error was encountered and a start and end cursor to be used in a verbose print of error nodes at some point.
+
+        :return: ``self.__tags_list``, the list where nodes were stored after the node parse process is complete.
+        :rtype: list
+        """
+        while self.curr_token.type is not TokenTypes.EOF:
             # Opened tag.
-            if self.curr_token.type is lexer.TokenTypes.ANGLE_BRACKET_L:
+            if self.curr_token.type is TokenTypes.ANGLE_BRACKET_L:
                 start_cursor = self.curr_token.cursor
 
-                if self.__next_token.type not in [lexer.TokenTypes.ID,
-                                                lexer.TokenTypes.EXCLAMATION,
-                                                lexer.TokenTypes.CLOSING_SLASH]: # ERROR NODE: non-valid tag.
-                    tag = HTMLErrorNode("Non-valid tag opening past angle bracket", self.curr_token.cursor, None, None)
+                if self.__next_token.type not in [TokenTypes.ID,
+                                                TokenTypes.EXCLAMATION,
+                                                TokenTypes.CLOSING_SLASH]: # ERROR NODE: non-valid tag.
+                    tag = HTMLErrorNode("Non-valid opening token", start_cursor, self.curr_token.cursor, None, None)
                     self.__tags_list.append(tag)
                     continue
 
                 tag = HTMLOpeningTagNode(self.curr_token.value, None, None, start_cursor, None)
 
                 # Process and validate closing tags.
-                if self.curr_token.type is lexer.TokenTypes.CLOSING_SLASH:
-                    if self.__next_token.type is not lexer.TokenTypes.ID: # ERROR NODE: no id for closing tag.
-                        tag = HTMLErrorNode("Closing tag has not ID (tag name)", self.curr_token.cursor, None, None)
+                if self.curr_token.type is TokenTypes.CLOSING_SLASH:
+                    if self.__next_token.type is not TokenTypes.ID: # ERROR NODE: no id for closing tag.
+                        tag = HTMLErrorNode("Closing tag has no ID", start_cursor, self.curr_token.cursor, None, None)
                         self.__tags_list.append(tag)
                         continue
                     tag = HTMLClosingTagNode(self.curr_token.value, start_cursor, None)
-                elif self.curr_token.type is lexer.TokenTypes.EXCLAMATION:
+                elif self.curr_token.type is TokenTypes.EXCLAMATION:
                     tag = HTMLDoctypeOrCommNode(self.curr_token.extra, start_cursor, None)
 
                 # Process and validate attrs if it is an open tag, not a closing tag.
-                if self.__next_token.type is lexer.TokenTypes.ID: 
+                if self.__next_token.type is TokenTypes.ID: 
                     attrs = {}
                     while ...:
-                        if self.curr_token.type is not lexer.TokenTypes.ID: break
+                        if self.curr_token.type is not TokenTypes.ID: break
                         key = self.curr_token.value
-                        if self.__next_token.type is not lexer.TokenTypes.ASSIGNMENT: break
-                        if self.__next_token.type is not lexer.TokenTypes.QUOTE: break
+                        if self.__next_token.type is not TokenTypes.ASSIGNMENT: break
+                        if self.__next_token.type is not TokenTypes.QUOTE: break
                         value = self.curr_token.value
                         attrs[key] = value
                         self.__next_token
                     tag.attributes = attrs
 
                 # Process and validate the end brace of any tag.
-                if self.curr_token.type is not lexer.TokenTypes.ANGLE_BRACKET_R:  # ERROR NODE: no matching '>' to '<'.
-                    tag = HTMLErrorNode("Tag has no matching '>' to finish", self.curr_token.cursor, None, None)
+                if self.curr_token.type is TokenTypes.CLOSING_SLASH: # Convert to selfclosing if ends w '/>'.
+                    if self.__next_token.type is not TokenTypes.ANGLE_BRACKET_R:  # ERROR NODE: not closed w '>'.
+                        tag = HTMLErrorNode("No matching '>' to end", start_cursor, self.curr_token.cursor, None, None) 
+                        self.__tags_list.append(tag)
+                        continue
+                    tag = HTMLSelfClosingTagNode(tag.tag_name, tag.attributes, tag.content, tag.cursor_start, None)
+                elif self.curr_token.type is not TokenTypes.ANGLE_BRACKET_R:  # ERROR NODE: not closed w '>'.
+                    tag = HTMLErrorNode("No matching '>' to end", start_cursor, self.curr_token.cursor, None, None)
                     self.__tags_list.append(tag)
                     continue
 
@@ -174,11 +212,11 @@ class Parser:
 
 
 if __name__ == "__main__":
-    with open("basic.html", "r") as htmlfile:
+    with open("tests/data/basic.html", "r") as htmlfile:
         stream = htmlfile.read()
 
     tree = Parser(stream)
-    # lexer.pretty_print_tokens(tree.lexed)
+    # pretty_print_tokens(tree.lexed)
 
     import pprint  # More readable, not needed as main import.
     _pretty = pprint.PrettyPrinter(indent=4)
