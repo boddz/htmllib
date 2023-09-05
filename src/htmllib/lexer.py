@@ -91,6 +91,10 @@ class Lexer:
         self.__inside_angle_bracket = False
 
     @property
+    def stream_raw(self) -> str:
+        return self.__stream_raw
+
+    @property
     def stream(self) -> list:
         return self.__stream_proc
 
@@ -158,7 +162,7 @@ class Lexer:
         if self.index == len(self.stream): identifier += char  # Avoid out of index but add char if it is at EOF.
         return identifier
 
-    def __eat_quotes(self) -> None:
+    def __eat_quotes(self, *, which: str="\"") -> None:
         """        
         **For internal use only**
 
@@ -169,11 +173,11 @@ class Lexer:
         """
         quoted = str()
         char = self.get_char(self.__index_up())  # Char past the first `"`, the start of quoted str.
-        while char not in ["\"", "\n"] and self.index < len(self.stream):
+        while char not in [which, "\n"] and self.index < len(self.stream):
             quoted += char
             self.cursor.increment()
             char = self.get_char(self.__index_up())
-        if char == "\"":
+        if char == which:
             self.cursor.increment()
         if self.index == len(self.stream): quoted += char  # Avoid out of index but add char if it is at EOF.
         return quoted
@@ -239,6 +243,10 @@ class Lexer:
                 self.cursor.increment()
                 quoted = self.__eat_quotes()
                 self.tokens.append(Token(TokenTypes.QUOTE, quoted, cursor))
+            elif char == "'":
+                self.cursor.increment()
+                quoted = self.__eat_quotes(which="'")
+                self.tokens.append(Token(TokenTypes.QUOTE, quoted, cursor))
             elif ord(char) >= ord('A') and ord(char) <= ord('Z') or \
                 ord(char) >= ord('a') and ord(char) <= ord('z') or \
                 ord(char) >= ord("0") and ord(char) <= ord("9"):  # All identifiers [aA-zZ, 0-9].
@@ -277,7 +285,7 @@ def pretty_print_tokens(tokens: list, *, index=None) -> None:
 
 
 if __name__ == "__main__":
-    with open("basic.html", "r") as file_obj:
+    with open("tests/data/basic.html", "r") as file_obj:
         code = file_obj.read()
 
     lexer = Lexer(code)
