@@ -22,7 +22,7 @@ class HTMLOpeningTagNode:
     """
     tag_name: str
     attributes: dict
-    content: str
+    inner_html: str
     cursor_start: Cursor
     cursor_end: Cursor
 
@@ -34,7 +34,6 @@ class HTMLSelfClosingTagNode:
     """
     tag_name: str
     attributes: dict
-    content: str
     cursor_start: Cursor
     cursor_end: Cursor
 
@@ -57,6 +56,10 @@ class HTMLDoctypeOrCommNode:
     text_raw: str
     cursor_start: Cursor
     cursor_end: Cursor
+
+
+class NonValidTagIDError(Exception): ...
+class NeverEndedTagError(Exception): ...
 
 
 @dataclass
@@ -117,6 +120,10 @@ class Parser:
         return self.__lexed
 
     @property
+    def tag_nodes_list(self) -> list:
+        return self.__tags_list
+
+    @property
     def curr_token(self) -> Token:
         """
         The current token in the list.
@@ -133,7 +140,7 @@ class Parser:
         self.__index += 1 if self.__index < len(self.lexed) - 1 else 0
         return self.lexed[self.__index]
 
-    def parse_tokens_to_node_list(self, *, debug: bool=False) -> list:
+    def _parse_tokens_to_node_list(self, *, debug: bool=False) -> list:
         """
         Converts tokens into HTML node classes.
 
@@ -141,14 +148,16 @@ class Parser:
         Supports
         --------
 
-        * Opening tags                             : ``<html>``
-        * Opening tags (w attrs/ multi attrs)      : ``<html lang="en">``
-        * Self closing tags                        : ``<img/>``
-        * Self closing tags (w attrs/ multi attrs) : ``<img src="null" alt="an example"/>``
-        * Closing tags                             : ``</html>``
+        ::
+        - Opening tags                               =>   ``<html>``
+        - Opening tags (w attrs/ multi attrs)        =>   ``<html lang="en">``
+        - Self closing tags                          =>   ``<img/>``
+        - Self closing tags (w attrs/ multi attrs)   =>   ``<img src="null" alt="an example"/>``
+        - Closing tags                               =>   ``</html>``
 
-        Any thing that does not match this criteria will instead be stored as an error node, with a message as to what
-        error was encountered and a start and end cursor to be used in a verbose print of error nodes at some point.
+        Any thing that does not match this criteria will instead be stored as an error node (or will be ignored if
+        possible and does not impact main structure of the tag), with a message as to what error was encountered and a
+        start and end cursor to be used in a verbose print of error nodes at some point.
 
         :return: ``self.__tags_list``, the list where nodes were stored after the node parse process is complete.
         :rtype: list
@@ -159,23 +168,37 @@ class Parser:
                 start_cursor = self.curr_token.cursor
 
                 if self.__next_token.type not in [TokenTypes.ID,
-                                                TokenTypes.EXCLAMATION,
-                                                TokenTypes.CLOSING_SLASH]: # ERROR NODE: non-valid tag.
-                    tag = HTMLErrorNode("Non-valid opening token", start_cursor, self.curr_token.cursor, None, None)
+                                                  TokenTypes.EXCLAMATION,
+                                                  TokenTypes.CLOSING_SLASH]: # ERROR NODE: non-valid tag.
+                    tag = HTMLErrorNode(message=f"Invalid tag name/ ID '{self.curr_token}'",
+                                        cursor_start=start_cursor,
+                                        cursor_end=self.curr_token.cursor,
+                                        exception=NonValidTagIDError(f"Invalid tag name/ ID '{self.curr_token}'"))
                     self.__tags_list.append(tag)
                     continue
 
-                tag = HTMLOpeningTagNode(self.curr_token.value, None, None, start_cursor, None)
+                tag = HTMLOpeningTagNode(tag_name=self.curr_token.value,
+                                         attributes=None,
+                                         inner_html=None,  # To be generated at a later stage.
+                                         cursor_start=start_cursor,
+                                         cursor_end=None)
 
                 # Process and validate closing tags.
                 if self.curr_token.type is TokenTypes.CLOSING_SLASH:
                     if self.__next_token.type is not TokenTypes.ID: # ERROR NODE: no id for closing tag.
-                        tag = HTMLErrorNode("Closing tag has no ID", start_cursor, self.curr_token.cursor, None, None)
+                        tag = HTMLErrorNode(message=f"Invalid tag name/ ID '{self.curr_token}'",
+                                            cursor_start=start_cursor,
+                                            cursor_end=self.curr_token.cursor,
+                                            exception=NonValidTagIDError(f"Invalid tag name/ ID '{self.curr_token}'"))
                         self.__tags_list.append(tag)
                         continue
-                    tag = HTMLClosingTagNode(self.curr_token.value, start_cursor, None)
+                    tag = HTMLClosingTagNode(tag_name=self.curr_token.value,
+                                             cursor_start=start_cursor,
+                                             cursor_end=None)
                 elif self.curr_token.type is TokenTypes.EXCLAMATION:
-                    tag = HTMLDoctypeOrCommNode(self.curr_token.extra, start_cursor, None)
+                    tag = HTMLDoctypeOrCommNode(text_raw=self.curr_token.extra,
+                                                cursor_start=start_cursor,
+                                                cursor_end=None)
 
                 # Process and validate attrs if it is an open tag, not a closing tag.
                 if self.__next_token.type is TokenTypes.ID: 
@@ -193,12 +216,21 @@ class Parser:
                 # Process and validate the end brace of any tag.
                 if self.curr_token.type is TokenTypes.CLOSING_SLASH: # Convert to selfclosing if ends w '/>'.
                     if self.__next_token.type is not TokenTypes.ANGLE_BRACKET_R:  # ERROR NODE: not closed w '>'.
-                        tag = HTMLErrorNode("No matching '>' to end", start_cursor, self.curr_token.cursor, None, None) 
+                        tag = HTMLErrorNode(message="Tag was never ended using a '>' bracket",
+                                            cursor_start=start_cursor,
+                                            cursor_end=self.curr_token.cursor,
+                                            exception=NeverEndedTagError("Tag was never ended using a '>' bracket"))
                         self.__tags_list.append(tag)
                         continue
-                    tag = HTMLSelfClosingTagNode(tag.tag_name, tag.attributes, tag.content, tag.cursor_start, None)
+                    tag = HTMLSelfClosingTagNode(tag_name=tag.tag_name,
+                                                 attributes=tag.attributes,
+                                                 cursor_start=tag.cursor_start,
+                                                 cursor_end=None)
                 elif self.curr_token.type is not TokenTypes.ANGLE_BRACKET_R:  # ERROR NODE: not closed w '>'.
-                    tag = HTMLErrorNode("No matching '>' to end", start_cursor, self.curr_token.cursor, None, None)
+                    tag = HTMLErrorNode(message="Tag was never ended using a '>' bracket",
+                                        cursor_start=start_cursor,
+                                        cursor_end=self.curr_token.cursor,
+                                        exception=NeverEndedTagError("Tag was never ended using a '>' bracket"))
                     self.__tags_list.append(tag)
                     continue
 
@@ -210,6 +242,53 @@ class Parser:
 
         return self.__tags_list
 
+    def _generate_nodes_content(self, *, reverse_pair: bool=True) -> None:
+        """
+        Match open and closing tags as pairs and return their inner HTML using string slices on the original raw HTML
+        that was passed to the parser.
+
+        :param reverse_pair: Whether the closing tags should be paired in reverse order or normally.
+        :type reverse_pair: bool, optional
+
+
+        ----------------------------------
+        Example Results of Reverse Pairing
+        ----------------------------------
+
+        If ``reverse_pair`` is True the following code '<div id="1"><div id="2">foo</div></div>' inner HTML would be ::
+            # Good '<p>-like' elements to gather their text content as they should not be used as containers.
+            <div id="2">foo
+            foo</div>
+
+        And if it is False it will be ::
+            # Good '<div>-like' elements to gather their inner HTML as they should be used as containers.
+            <div id="2">foo</div>
+            foo
+
+
+        TODO:
+            Maybe implement smarter pairing depending on the tag type, whether it is in a list of '<p>-like' sectioning
+            tags or a list of '<div>-like' container tags. 
+        """
+        node_pairs = []  # Store matching valid pairs (tuples)
+
+        if reverse_pair:
+            tags_list_dupe_rev = [node for node in reversed(self.__tags_list)]
+        else:
+            tags_list_dupe_rev = [node for node in self.__tags_list]
+
+        for node in self.__tags_list:
+            if type(node) != HTMLOpeningTagNode: continue  # Open tag is encountered.
+            for index, balance_nodes in enumerate(tags_list_dupe_rev):
+                if node.tag_name == balance_nodes.tag_name and type(balance_nodes) == HTMLClosingTagNode:
+                    node_pairs.append((node, balance_nodes))
+                    tags_list_dupe_rev.pop(index)  # Value matches, so pop it to avoid confusion and invalid pairs.
+                    break
+
+        for pair in node_pairs:
+            pair[0].inner_html = self.html_raw[pair[0].cursor_end.index + 1 : pair[1].cursor_start.index]
+            print(pair[0].inner_html)
+
 
 if __name__ == "__main__":
     with open("tests/data/basic.html", "r") as htmlfile:
@@ -220,5 +299,5 @@ if __name__ == "__main__":
 
     import pprint  # More readable, not needed as main import.
     _pretty = pprint.PrettyPrinter(indent=4)
-    
-    _pretty.pprint(tree.parse_tokens_to_node_list())
+
+    _pretty.pprint(tree._parse_tokens_to_node_list())
