@@ -145,7 +145,7 @@ class Lexer:
 
         Eat chars and return them as a string whilst incrementing the lexers main index.
 
-        :param until: The character to stop at, defaults to " "
+        :param until: The character to stop at
         :type until: str, optional
 
         :return: ``identifier``, the string that was produced from consuming the valid lexemes
@@ -184,20 +184,20 @@ class Lexer:
 
     def snapshot_cursor(self, cursor: Cursor) -> Cursor:
         """
-        Snapshot a cursor at it's current position. Useful for the :meth:`~.Lexer.lex` method.
+        Snapshot a cursor at it's current position. Useful for the :meth:``self.lex``.
         """
         return Cursor(cursor.index, cursor.line, cursor.col)
 
     def lex(self, *, debug: bool=False) -> list(Token):
         """
-        Generates tokens from :attr:`~.Lexer.stream` to be appended to :attr:`~.Lexer.tokens`.
+        Generates tokens from :attr:``self.stream`` to be appended to :attr:``self.tokens``.
 
         :param debug: Do not raise, just print errors
-        :type param: bool, optional
+        :type debug: bool, optional
 
         :raises UnkownLexemeError: whenever a non-supported lexeme is found
 
-        :return: :attr:`~.Lexer.tokens`
+        :return: :attr:``self.tokens``
         :rtype: list
         """
         while self.index < len(self.stream):
