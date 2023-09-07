@@ -29,7 +29,7 @@ class TestParserMethods(TestCase):
         self.parser_no_valid_id_error = htmllib.Parser("<></>")
         self.parser_never_closed_error = htmllib.Parser("<div id='111' \n\n\nclass='zxc'")
         self.parser_never_closed_error_sc = htmllib.Parser("<img/")
-        self.parser_open_tag_inner_content = htmllib.Parser("<div><div><p>a<p>123</p><p>456</p></p></div>")
+        self.parser_open_tag_inner_content = htmllib.Parser("<div><div><div>test</div><p>a<p>123</p><p>456</p></p></div>")
 
     def test_parser_opening_tag(self) -> None:
         nodes = self.parser_opening_tag._parse_tokens_to_node_list()
@@ -165,7 +165,8 @@ class TestParserMethods(TestCase):
     def test_parser_open_tag_inner_content(self) -> None:
         nodes = self.parser_open_tag_inner_content._parse_tokens_to_node_list()
         self.assertEqual(type(nodes[0]), htmllib.HTMLOpeningTagNode)
-        self.assertEqual(nodes[1].inner_html, "<p>a<p>123</p><p>456</p></p>")
-        self.assertEqual(nodes[2].inner_html, "a<p>123</p><p>456</p>")
-        self.assertEqual(nodes[3].inner_html, "123")
-        self.assertEqual(nodes[5].inner_html, "456")
+        self.assertEqual(nodes[1].inner_html, "<div>test</div><p>a<p>123</p><p>456</p></p>")
+        self.assertEqual(nodes[2].inner_html, "test")
+        self.assertEqual(nodes[4].inner_html, "a<p>123</p><p>456</p>")
+        self.assertEqual(nodes[5].inner_html, "123")
+        self.assertEqual(nodes[7].inner_html, "456")
