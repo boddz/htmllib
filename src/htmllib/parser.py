@@ -10,7 +10,7 @@ Take generated tokens list, run validation checks and convert into nodes that re
 
 from __future__ import annotations
 
-from .lexer import Cursor, TokenTypes, Lexer
+from .lexer import Cursor, TokenTypes, Lexer, Token
 
 from dataclasses import dataclass
 
@@ -71,7 +71,6 @@ class HTMLErrorNode:
     cursor_start: Cursor
     cursor_end: Cursor
     exception: Exception
-    extra: str
 
 
 class Parser:
@@ -170,10 +169,10 @@ class Parser:
                 if self.__next_token.type not in [TokenTypes.ID,
                                                   TokenTypes.EXCLAMATION,
                                                   TokenTypes.CLOSING_SLASH]: # ERROR NODE: non-valid tag.
-                    tag = HTMLErrorNode(message=f"Invalid tag name/ ID '{self.curr_token}'",
+                    tag = HTMLErrorNode(message=f"Invalid tag name/ ID '{self.curr_token.value}'",
                                         cursor_start=start_cursor,
                                         cursor_end=self.curr_token.cursor,
-                                        exception=NonValidTagIDError(f"Invalid tag name/ ID '{self.curr_token}'"))
+                                        exception=NonValidTagIDError(f"Invalid tag name/ ID '{self.curr_token.value}'"))
                     self.__tags_list.append(tag)
                     continue
 
@@ -185,11 +184,13 @@ class Parser:
 
                 # Process and validate closing tags.
                 if self.curr_token.type is TokenTypes.CLOSING_SLASH:
+                    end = Cursor(self.curr_token.cursor.index, self.curr_token.cursor.line, self.curr_token.cursor.col)
+                    tok = Token(self.curr_token.type, self.curr_token.value, self.curr_token.cursor)
                     if self.__next_token.type is not TokenTypes.ID: # ERROR NODE: no id for closing tag.
-                        tag = HTMLErrorNode(message=f"Invalid tag name/ ID '{self.curr_token}'",
+                        tag = HTMLErrorNode(message=f"Invalid tag name/ ID '{tok.value}'",
                                             cursor_start=start_cursor,
-                                            cursor_end=self.curr_token.cursor,
-                                            exception=NonValidTagIDError(f"Invalid tag name/ ID '{self.curr_token}'"))
+                                            cursor_end=end,
+                                            exception=NonValidTagIDError(f"Invalid tag name/ ID '{tok.value}'"))
                         self.__tags_list.append(tag)
                         continue
                     tag = HTMLClosingTagNode(tag_name=self.curr_token.value,
@@ -275,8 +276,12 @@ class Parser:
         for node in self.__tags_list:
             if type(node) == HTMLOpeningTagNode:
                 stack.append(node)
-            if type(node) == HTMLClosingTagNode and node.tag_name == stack[-1].tag_name and len(stack) > 0:
-                node_pairs.append((stack.pop(), node))
+            elif type(node) == HTMLClosingTagNode:
+                for index, _ in enumerate(stack):
+                    rev_index = -index if index > 0 else -1  # Go through the stack from end to start until match name.
+                    if stack[rev_index].tag_name == node.tag_name:
+                        node_pairs.append((stack.pop(rev_index), node))
+                        break  # Exit after the first matching pair have been found on stack, avoid mismatches.
 
         for pair in node_pairs:
             pair[0].inner_html = self.html_raw[pair[0].cursor_end.index + 1 : pair[1].cursor_start.index]
