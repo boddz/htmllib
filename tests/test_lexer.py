@@ -156,6 +156,4 @@ class TestLexerMethods(TestCase):
         self.assertEqual((self.lexed_cursors_pos[26].cursor.line, self.lexed_cursors_pos[26].cursor.col), (12, 22))
         self.assertEqual((self.lexed_cursors_pos[29].cursor.line, self.lexed_cursors_pos[29].cursor.col), (12, 28))
 
-        htmllib.pretty_print_tokens(self.lexed_cursors_pos)
-
     #endregion (token cursror positions)
