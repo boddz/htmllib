@@ -261,14 +261,13 @@ class Parser:
                                  | Pop <----| <------------------/
                                  V
                             [ (n1, n2) , ... ] 
-  
+
                 # If the node is an opening tag, push to the stack,
                 # else if it is a closing tag and matches the tag that is at the end of the stack
                 # pop the last item on the stack and pair it with the current closing tag node.
                 # Repeat until all pairs are found.
 
-        In the above diagram, the value 2 would not be paired and would be ignored, it is not
-        valid HTML.
+        In the above diagram, the value (2) would not be paired and would be ignored as it is not valid HTML.
         """
         node_pairs = []  # Store matching valid pairs (tuples)
         stack = []  # A stack to store opening tags.
@@ -278,9 +277,10 @@ class Parser:
                 stack.append(node)
             elif type(node) == HTMLClosingTagNode:
                 for index, _ in enumerate(stack):
-                    rev_index = -index if index > 0 else -1  # Go through the stack from end to start until match name.
-                    if stack[rev_index].tag_name == node.tag_name:
-                        node_pairs.append((stack.pop(rev_index), node))
+                    if index < len(stack): index += 1  # Add 1 to the index, avoid mismatches due to -0 index.
+                    else: break  # Save a trailing cycle on each operation.
+                    if stack[-index].tag_name == node.tag_name:
+                        node_pairs.append((stack.pop(-index), node))
                         break  # Exit after the first matching pair have been found on stack, avoid mismatches.
 
         for pair in node_pairs:
