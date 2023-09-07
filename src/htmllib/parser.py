@@ -240,54 +240,46 @@ class Parser:
             else:  # Not starting with '<' so not a tag. Continue to next token.
                 self.__next_token
 
+        self._generate_nodes_content()  # Generate content for each node corrosponding with ending tag.
+
         return self.__tags_list
 
-    def _generate_nodes_content(self, *, reverse_pair: bool=True) -> None:
+    def _generate_nodes_content(self) -> None:
         """
         Match open and closing tags as pairs and return their inner HTML using string slices on the original raw HTML
         that was passed to the parser.
 
-        :param reverse_pair: Whether the closing tags should be paired in reverse order or normally.
-        :type reverse_pair: bool, optional
+        Stack checking for accurate pairing ::
 
+                _________________________________________________
+              v|(5)                                        v|(5) |
+            [<div>,  <p>,  <p>,  </p>,  <p>,  </p>,  </div>]     |
+               ^|    ^|    ^|     ^|    ^|     ^|                |
+             (1)|  (2)|  (3)|___(3)/  (4)|___(4)/                |
+              Push  Push  Push   |          |                    |
+                                 | Pop <----| <------------------/
+                                 V
+                            [ (n1, n2) , ... ] 
+  
+                # If the node is an opening tag, push to the stack,
+                # else if it is a closing tag and matches the tag that is at the end of the stack
+                # pop the last item on the stack and pair it with the current closing tag node.
+                # Repeat until all pairs are found.
 
-        ----------------------------------
-        Example Results of Reverse Pairing
-        ----------------------------------
-
-        If ``reverse_pair`` is True the following code '<div id="1"><div id="2">foo</div></div>' inner HTML would be ::
-            # Good '<p>-like' elements to gather their text content as they should not be used as containers.
-            <div id="2">foo
-            foo</div>
-
-        And if it is False it will be ::
-            # Good '<div>-like' elements to gather their inner HTML as they should be used as containers.
-            <div id="2">foo</div>
-            foo
-
-
-        TODO:
-            Maybe implement smarter pairing depending on the tag type, whether it is in a list of '<p>-like' sectioning
-            tags or a list of '<div>-like' container tags. 
+        In the above diagram, the value 2 would not be paired and would be ignored, it is not
+        valid HTML.
         """
         node_pairs = []  # Store matching valid pairs (tuples)
-
-        if reverse_pair:
-            tags_list_dupe_rev = [node for node in reversed(self.__tags_list)]
-        else:
-            tags_list_dupe_rev = [node for node in self.__tags_list]
+        stack = []  # A stack to store opening tags.
 
         for node in self.__tags_list:
-            if type(node) != HTMLOpeningTagNode: continue  # Open tag is encountered.
-            for index, balance_nodes in enumerate(tags_list_dupe_rev):
-                if node.tag_name == balance_nodes.tag_name and type(balance_nodes) == HTMLClosingTagNode:
-                    node_pairs.append((node, balance_nodes))
-                    tags_list_dupe_rev.pop(index)  # Value matches, so pop it to avoid confusion and invalid pairs.
-                    break
+            if type(node) == HTMLOpeningTagNode:
+                stack.append(node)
+            if type(node) == HTMLClosingTagNode and node.tag_name == stack[-1].tag_name and len(stack) > 0:
+                node_pairs.append((stack.pop(), node))
 
         for pair in node_pairs:
             pair[0].inner_html = self.html_raw[pair[0].cursor_end.index + 1 : pair[1].cursor_start.index]
-            print(pair[0].inner_html)
 
 
 if __name__ == "__main__":
