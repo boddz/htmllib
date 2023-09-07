@@ -254,7 +254,8 @@ class Lexer:
                 self.tokens.append(Token(TokenTypes.ID, identifier, cursor))
             else: self.cursor.increment()
 
-        self.tokens.append(Token(TokenTypes.EOF, "EOF", None))
+        self.tokens.append(Token(TokenTypes.EOF, "EOF", Cursor(len(self.stream_raw),
+                                                               self.cursor.line, self.cursor.col)))
         return self.tokens
 
 
