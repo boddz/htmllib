@@ -31,4 +31,6 @@ from .parser import (
     HTMLClosingTagNode,
     HTMLSelfClosingTagNode,
     HTMLErrorNode,
+    NonValidTagIDError,
+    NeverEndedTagError
 )
