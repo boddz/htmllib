@@ -99,5 +99,5 @@ class HTMLTree:
         return self.search_tags_by_attr(("id", tag_id))
 
     def search_tags_by_class(self, tag_class: str) -> list:
-        assert type(tag_class) == str, "You need to provide the ID as a string"
+        assert type(tag_class) == str, "You need to provide the class as a string"
         return self.search_tags_by_attr(("class", tag_class))
