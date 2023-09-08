@@ -2,7 +2,7 @@
 HTMLLIB
 =======
 
-A Python3 Module that provides and API for gathering data from a stream/ string of HTML code.
+A Python3 Module that provides an API for gathering data from a stream/ string of HTML code.
 
 There are no docs for this project yet as it is still in its early stages of development, although I have got some
 cool things implemented, they will be in the ``main.py`` file either commented or uncommented. The ``main.py`` file is
