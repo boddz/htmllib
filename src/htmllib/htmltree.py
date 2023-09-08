@@ -19,8 +19,9 @@ from .parser import (
 
 class HTMLTree:
     def __init__(self, html_stream: str) -> None:
-        self.__html_stream = html_stream
-        self.__parser_obj = Parser(html_stream)
+        assert type(html_stream) == bytes or type(html_stream) == str, "HTML Stream must be bytes string or string"
+        self.__html_stream = html_stream.decode("utf-8") if type(html_stream) == bytes else html_stream
+        self.__parser_obj = Parser(self.__html_stream)
         self.__nodes_list = self.__parser_obj._parse_tokens_to_node_list()
         self.__doctype_or_comment_nodes = [node for node in self.__nodes_list if type(node) == HTMLDoctypeOrCommNode]
         self.__opening_tag_nodes = [node for node in self.__nodes_list if type(node) == HTMLOpeningTagNode]
@@ -62,42 +63,47 @@ class HTMLTree:
     def error_nodes(self) -> list:
         return self.__error_nodes
 
-    def search_tags_using_attrs(self, attrs: dict) -> list:
-        nodes = [node for node in self.opening_tag_nodes if attrs == node.attributes]  # Opening tags with attrs.
-        if len(self.self_closing_tag_nodes) > 0:  # Then append self closing tags with attrs if any.
-            nodes.append(*[node for node in self.self_closing_tag_nodes if attrs == node.attributes])
+    def search_opening_tags_by_name(self, name: str) -> list:
+        assert type(name) == str, "You need to provide the tag name as a string"
+        nodes = [node for node in self.opening_tag_nodes if node.tag_name == name] # Opening tags with attrs.
         return nodes
 
-    def search_tags_using_exact_attrs(self, attrs: dict) -> list:
-        nodes = []
-        if len(self.self_closing_tag_nodes) > 0:
-            nodes.append(*[node for node in self.self_closing_tag_nodes if attrs == node.attributes])
+    def search_opening_tags_by_attrs(self, attrs: dict) -> list:
+        assert type(attrs) == dict, "You need to provide the attributes as a dict (can be non-strict order)"
+        nodes = [node for node in self.opening_tag_nodes if attrs == node.attributes]  # Opening tags with attrs.
+        return nodes
+
+    def search_opening_tags_by_exact_attrs(self, attrs: dict) -> list:
+        assert type(attrs) == dict, "You need to provide the attributes as a dict (must be strict order)"
+        nodes = [node for node in self.opening_tag_nodes if attrs == node.attributes]
+        matched = []
         attrs = list(attrs.items())
-        match_count = 0
+
         for node in self.opening_tag_nodes:
+            match_count = 0
             try:
+                if node.attributes is None: continue
                 for index, attr in enumerate(node.attributes.items()):
                     if attr[0] != attrs[index][0] and attr[1] != attrs[index][1]: break
                     match_count += 1
             except IndexError:
                 continue
-            
-            if match_count == len(node.attributes): nodes.append(node)
+            if match_count == len(node.attributes) and len(attrs) == len(node.attributes): matched.append(node)
 
+        return matched
+
+    def search_opening_tags_by_attr(self, attr: tuple) -> list:
+        assert attr != () and type(attr) is tuple, "You need to provide a valid tuple ('<attr_key>', '<attr_value>')"
+        nodes = [n for n in self.opening_tag_nodes if n.attributes is not None and attr[0] in n.attributes and        \
+                 n.attributes[attr[0]] == attr[1]]
         return nodes
 
-    def search_tags_by_attr(self, attr: tuple) -> list:
-        assert attr != () and type(attr) is tuple, "You need to provide a valid dict {'<attr_key>': '<attr_value>'}"
-        nodes = [n for n in self.opening_tag_nodes if attr[0] in n.attributes and n.attributes[attr[0]] == attr[1]]
-        if len(self.self_closing_tag_nodes) > 0:
-            nodes.append(*[n for n in self.opening_tag_nodes if attr[0] in n.attributes and                           \
-                           n.attributes[attr[0]] == attr[1]])
-        return nodes
-
-    def search_tags_by_id(self, tag_id: str) -> list:
+    def search_opening_tags_by_id(self, tag_id: str) -> list:
         assert type(tag_id) == str, "You need to provide the ID as a string"
-        return self.search_tags_by_attr(("id", tag_id))
+        return self.search_opening_tags_by_attr(("id", tag_id))
 
-    def search_tags_by_class(self, tag_class: str) -> list:
+    def search_opening_tags_by_class(self, tag_class: str) -> list:
         assert type(tag_class) == str, "You need to provide the class as a string"
-        return self.search_tags_by_attr(("class", tag_class))
+        return self.search_opening_tags_by_attr(("class", tag_class))
+
+    # TODO: below, search_self_closing_tags_by* methods.
