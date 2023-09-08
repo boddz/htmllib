@@ -34,3 +34,5 @@ from .parser import (
     NonValidTagIDError,
     NeverEndedTagError
 )
+
+from .htmltree import *  # Main interface.
