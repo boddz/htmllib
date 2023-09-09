@@ -83,6 +83,8 @@ class Lexer:
 
     """
     def __init__(self, stream: str) -> None:
+        assert type(stream) == bytes or type(stream) == str, "HTML Stream must be bytes string or string"
+        self.__html_stream = stream.decode("utf-8") if type(stream) == bytes else stream
         self.__stream_raw = stream
         self.__stream_proc = list(stream)
         self.__cursor = Cursor(None, 1, 1)  # For index, use the lexer's index at a later stage in lex.

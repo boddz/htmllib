@@ -91,6 +91,8 @@ class Parser:
 
     """
     def __init__(self, html: str, /) -> None:
+        assert type(html) == bytes or type(html) == str, "HTML Stream must be bytes string or string"
+        self.__html_stream = html.decode("utf-8") if type(html) == bytes else html
         self.__html_raw = html
         self.__lexer = Lexer(html)
         self.__lexed = self.__lexer.lex()
@@ -120,6 +122,9 @@ class Parser:
 
     @property
     def tag_nodes_list(self) -> list:
+        """
+        The list of tag/ error nodes generated from the ``self._parse_tokens_to_node_list`` method.
+        """
         return self.__tags_list
 
     @property
