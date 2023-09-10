@@ -21,6 +21,7 @@ class TestLexerMethods(TestCase):
     def setUp(self) -> None:
         self.htmltree_simple = htmllib.HTMLTree("""
             <!DOCTYPE html>
+            <!   Doctype html     >
 
             <html lang="en">
                 <head>
@@ -42,10 +43,15 @@ class TestLexerMethods(TestCase):
             </html>
         """)
 
+    def test_htmltree_simple_doctypes(self) -> None:
+        self.assertEqual(self.htmltree_simple.doctypes_raw[0], "DOCTYPE html")
+        self.assertEqual(self.htmltree_simple.doctypes_raw[1], "Doctype html")
+        self.assertEqual(self.htmltree_simple.doctype_raw, "Doctype html")
+
     def test_htmltree_simple_nodes(self) -> None:
         self.assertNotEqual(self.htmltree_simple.nodes_list, [])
-        self.assertEqual(len(self.htmltree_simple.nodes_list), 22)
-        self.assertEqual(len(self.htmltree_simple.doctype_or_comment_nodes), 2)
+        self.assertEqual(len(self.htmltree_simple.nodes_list), 23)
+        self.assertEqual(len(self.htmltree_simple.doctype_or_comment_nodes), 3)
         self.assertEqual(len(self.htmltree_simple.opening_tag_nodes), 11)
         self.assertEqual(len(self.htmltree_simple.closing_tag_nodes), 7)
         self.assertEqual(len(self.htmltree_simple.self_closing_tag_nodes), 1)
