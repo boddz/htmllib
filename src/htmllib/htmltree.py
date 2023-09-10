@@ -96,7 +96,7 @@ class HTMLTree:
     @property
     def doctype_raw(self) -> str:
         """
-        The most recent doctype declarations
+        The most recent doctype declaration.
         """
         return self.doctypes_raw[-1]
 
@@ -163,7 +163,7 @@ class HTMLTree:
             try:
                 if node.attributes is None: continue
                 for index, attr in enumerate(node.attributes.items()):
-                    if attr[0] != attrs[index][0] and attr[1] != attrs[index][1]: break
+                    if attr[0] != attrs[index][0] or attr[1] != attrs[index][1]: break
                     match_count += 1
             except IndexError:
                 continue
@@ -174,12 +174,62 @@ class HTMLTree:
     def search_tags_by_attr(self, attr: tuple, *, self_closing: bool=False) -> list:
         """
         Search through opening tags node list (or self closing if specified) and return a list of nodes that contain
-        the provided attrs (<key>, <value>) pair.
+        the provided attr (<key>, <value>) pair.
         """
         assert attr != () and type(attr) is tuple, "You need to provide a valid tuple ('<attr_key>', '<attr_value>')"
         nodes = self.self_closing_tag_nodes if self_closing else self.opening_tag_nodes
-        matched = [n for n in nodes if n.attributes is not None and attr[0] in n.attributes and        \
+        matched = [n for n in nodes if n.attributes is not None and attr[0] in n.attributes and                       \
                    n.attributes[attr[0]] == attr[1]]
+        return matched
+
+    def search_tags_by_attrs_keys(self, attrs_keys: list, *, self_closing: bool=False) -> list:
+        """
+        Search through opening tags node list (or self closing if specified) and return a list of nodes that match the
+        tag attributes keys provided (non-strict matching, order does not matter).
+        """
+        assert attrs_keys != [] and type(attrs_keys) is list, "You must provide a valid keys list [<key>, <key>, ...]"
+        nodes = self.self_closing_tag_nodes if self_closing else self.opening_tag_nodes
+        matched = []
+        for node in nodes:
+            if node.attributes is None: continue
+            match_count = 0
+            for attr_key in node.attributes.keys():
+                if attr_key not in attrs_keys: break
+                match_count += 1
+            if match_count == len(node.attributes) and len(attrs_keys) == len(node.attributes): matched.append(node)
+
+        return matched
+
+    def search_tags_by_exact_attrs_keys(self, attrs_keys: list, *, self_closing: bool=False) -> list:
+        """
+        Search through opening tags node list (or self closing if specified) and return a list of nodes that match the
+        tag attributes keys provided (strict matching, order does matter).
+        """
+        assert attrs_keys != [] and type(attrs_keys) is list, "You must provide a valid keys list [<key>, <key>, ...]"
+        nodes = self.self_closing_tag_nodes if self_closing else self.opening_tag_nodes
+        matched = []
+
+        for node in nodes:
+            match_count = 0
+            try:
+                if node.attributes is None: continue
+                for index, attr_key in enumerate(node.attributes.keys()):
+                    if attr_key != attrs_keys[index]: break
+                    match_count += 1
+            except IndexError:
+                continue
+            if match_count == len(node.attributes) and len(attrs_keys) == len(node.attributes): matched.append(node)
+
+        return matched
+
+    def search_tags_by_attr_key(self, attr_key: str, *, self_closing: bool=False) -> list:
+        """
+        Search through opening tags node list (or self closing if specified) and return a list of nodes that contain
+        the provided attr key.
+        """
+        assert attr_key != () and type(attr_key) is str, "You need to provide a valid str <attr_key>)"
+        nodes = self.self_closing_tag_nodes if self_closing else self.opening_tag_nodes
+        matched = [n for n in nodes if n.attributes is not None and attr_key in n.attributes]
         return matched
 
     def search_tags_by_id(self, tag_id: str, *, self_closing: bool=False) -> list:
