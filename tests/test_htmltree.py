@@ -19,6 +19,7 @@ from unittest import TestCase
 
 class TestLexerMethods(TestCase):
     def setUp(self) -> None:
+        self.htmltree_none = htmllib.HTMLTree("")
         self.htmltree_simple = htmllib.HTMLTree("""
             <!DOCTYPE html>
             <!   Doctype html     >
@@ -46,6 +47,8 @@ class TestLexerMethods(TestCase):
         """)
 
     def test_htmltree_simple_doctypes(self) -> None:
+        self.assertEqual(self.htmltree_none.doctypes_raw, [])
+        self.assertIsNone(self.htmltree_none.doctype_raw)
         self.assertEqual(self.htmltree_simple.doctypes_raw[0], "DOCTYPE html")
         self.assertEqual(self.htmltree_simple.doctypes_raw[1], "Doctype html")
         self.assertEqual(self.htmltree_simple.doctype_raw, "Doctype html")
