@@ -98,7 +98,7 @@ class HTMLTree:
         """
         The most recent doctype declaration.
         """
-        return self.doctypes_raw[-1]
+        return self.doctypes_raw[-1] if len(self.doctypes_raw) > 0 else None
 
     @property
     def opening_tag_nodes(self) -> list:
