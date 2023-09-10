@@ -12,10 +12,10 @@ from enum import Enum, auto
 from dataclasses import dataclass
 
 
-class UnkownLexemeError(Exception): ...
-
-
 class TokenTypes(Enum):
+    """
+    All of the valid token types as enum values.
+    """
     ANGLE_BRACKET_L = auto()
     ANGLE_BRACKET_R = auto()
     EXCLAMATION = auto()
@@ -30,14 +30,24 @@ class TokenTypes(Enum):
 
 @dataclass
 class Cursor:
+    """
+    Represents the position of the char pointer in the stream of HTML code used for tracking the exact position, line
+    and column.
+    """
     index: int
     line: int
     col: int
 
     def increment(self, chars: int=1) -> None:
+        """
+        To be called when moving on to the next character in the stream list.
+        """
         self.col += chars
 
     def new_line(self, lines :int=1) -> None:
+        """
+        To be called whenever the current character is a newline character ('\n').
+        """
         self.line += lines
         self.col = 1
 
@@ -56,6 +66,9 @@ class Token:
 class Lexer:
     """
     Represents the lex process/ states.
+
+    :param html_stream: A stream of raw HTML code to tokenize/ lex
+    :type html_stream: bytes, str
 
     -------------
     Example Usage
@@ -84,11 +97,10 @@ class Lexer:
     * Index may not appear accurate when compared to text editors, but it is for the sake of list indexing the HTML.
 
     """
-    def __init__(self, stream: str | bytes) -> None:
-        assert type(stream) == bytes or type(stream) == str, "HTML Stream must be bytes string or string"
-        self.__html_stream = stream.decode("utf-8") if type(stream) == bytes else stream
-        self.__stream_raw = stream
-        self.__stream_proc = list(stream)
+    def __init__(self, html_stream: str | bytes) -> None:
+        assert type(html_stream) == bytes or type(html_stream) == str, "HTML Stream must be bytes string or string"
+        self.__html_stream = html_stream.decode("utf-8") if type(html_stream) == bytes else html_stream
+        self.__stream_proc = list(html_stream)
         self.__cursor = Cursor(None, 1, 1)  # For index, use the lexer's index at a later stage in lex.
         self.__index = 0
         self.__tokens = list()
@@ -96,18 +108,30 @@ class Lexer:
 
     @property
     def stream_raw(self) -> str:
-        return self.__stream_raw
+        """
+        The original (decoded) stream of HTML code.
+        """
+        return self.__html_stream
 
     @property
-    def stream(self) -> list:
+    def stream(self) -> list(str):
+        """
+        The original (decoded) stream split into a list.
+        """
         return self.__stream_proc
 
     @property
     def cursor(self) -> Cursor:
+        """
+        The main cursor to use during tokenization. Used in cursor snapshots.
+        """
         return self.__cursor
 
     @property
     def index(self) -> int:
+        """
+        The current char index in the stream list.
+        """
         return self.__index
 
     @property
