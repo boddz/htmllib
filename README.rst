@@ -18,3 +18,20 @@ Parser Process Flow Diagram
 
 .. image:: assets/parse_diagram.png
     :alt: A Diagram of HTMLLIB's Parse Process 
+
+
+------------------
+Testing the Module
+------------------
+
+This project has decent test coverage thus far using the ``unittest`` module from Python3's standard library.
+
+Run all tests with:
+    .. code-block:: bash
+
+        python -m unittest discover tests/
+
+Run a single test with:
+    .. code-block:: bash
+
+        python -m unittest tests/test_<which>.py
