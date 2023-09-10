@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 =======================
 The HTML (TOKEN) Parser
@@ -75,22 +73,26 @@ class HTMLErrorNode:
 
 class Parser:
     """
-    Used to a parse stream (str) of HTML code into valid nodes/ error nodes. First uses lexer module to create tokens
-    list and then runs :meth:``self.parse_tokens_to_node_list()`` to parse into a list of nodes.  
+    Used to a parse stream (str/ bytes) of HTML code into valid nodes/ error nodes. First uses lexer module to create
+    tokens list and then runs :meth:``self._parse_tokens_to_node_list`` to parse into a list of nodes.  
 
-    Usage ::
+    -------------
+    Example Usage
+    -------------
+
+    ::
 
         with open("basic.html", "r") as htmlfile:
             stream = htmlfile.read()
 
-        tree = Parser(stream)
+        parser = Parser(stream)
 
         import pprint  # More readable prints of final node list.
         pretty = pprint.PrettyPrinter(indent=4)
-        pretty.pprint(tree.parse_tokens_to_node_list())
+        pretty.pprint(parser._parse_tokens_to_node_list())
 
     """
-    def __init__(self, html: str, /) -> None:
+    def __init__(self, html: str | bytes) -> None:
         assert type(html) == bytes or type(html) == str, "HTML Stream must be bytes string or string"
         self.__html_stream = html.decode("utf-8") if type(html) == bytes else html
         self.__html_raw = html
@@ -290,16 +292,3 @@ class Parser:
 
         for pair in node_pairs:
             pair[0].inner_html = self.html_raw[pair[0].cursor_end.index + 1 : pair[1].cursor_start.index]
-
-
-if __name__ == "__main__":
-    with open("tests/data/basic.html", "r") as htmlfile:
-        stream = htmlfile.read()
-
-    tree = Parser(stream)
-    # pretty_print_tokens(tree.lexed)
-
-    import pprint  # More readable, not needed as main import.
-    _pretty = pprint.PrettyPrinter(indent=4)
-
-    _pretty.pprint(tree._parse_tokens_to_node_list())

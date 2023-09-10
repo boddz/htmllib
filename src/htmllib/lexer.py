@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 ==============
 The HTML Lexer
@@ -59,7 +57,11 @@ class Lexer:
     """
     Represents the lex process/ states.
 
-    Usage ::
+    -------------
+    Example Usage
+    -------------
+
+    ::
 
         # Open a file and read contents, or just dump HTML data into a variable directly.
         with open("simple_tag.html", "r") as file_obj:
@@ -82,7 +84,7 @@ class Lexer:
     * Index may not appear accurate when compared to text editors, but it is for the sake of list indexing the HTML.
 
     """
-    def __init__(self, stream: str) -> None:
+    def __init__(self, stream: str | bytes) -> None:
         assert type(stream) == bytes or type(stream) == str, "HTML Stream must be bytes string or string"
         self.__html_stream = stream.decode("utf-8") if type(stream) == bytes else stream
         self.__stream_raw = stream
@@ -285,13 +287,3 @@ def pretty_print_tokens(tokens: list, *, index=None) -> None:
                        "------"
         )
         if index is not None: break
-
-
-if __name__ == "__main__":
-    with open("tests/data/basic.html", "r") as file_obj:
-        code = file_obj.read()
-
-    lexer = Lexer(code)
-    tokens = lexer.lex()
-
-    pretty_print_tokens(tokens)

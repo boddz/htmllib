@@ -18,7 +18,36 @@ from .parser import (
 
 
 class HTMLTree:
-    def __init__(self, html_stream: str) -> None:
+    """
+    This class acts as the main interface you should use to interact with the parsed HTML data.
+
+    :param html_stream: A stream of raw HTML code to parse
+    :type html_stream: bytes, str
+
+    -------------
+    Example Usage
+    -------------
+
+    ::
+
+        import htmllib
+
+        htmltree = htmllib.HTMLTree('''
+            <html lang="en">
+                <head>
+                    <title>HTMLLIB Test Page</title>
+                </head>
+                <body>
+                    <h1>Hello, World!</h1>
+                    <p id="find_me">You found me!</p>
+                </body>
+            </html>
+        ''')
+
+        # Stdout output: You found me!
+        print(htmltree.search_tags_by_id("find_me")[0].inner_html)
+    """
+    def __init__(self, html_stream: str | bytes) -> None:
         assert type(html_stream) == bytes or type(html_stream) == str, "HTML Stream must be bytes string or string"
         self.__html_stream = html_stream.decode("utf-8") if type(html_stream) == bytes else html_stream
         self.__parser_obj = Parser(self.__html_stream)
