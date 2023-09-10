@@ -76,6 +76,9 @@ class Parser:
     Used to a parse stream (str/ bytes) of HTML code into valid nodes/ error nodes. First uses lexer module to create
     tokens list and then runs :meth:``self._parse_tokens_to_node_list`` to parse into a list of nodes.  
 
+    :param html_stream: A stream of raw HTML code to parse
+    :type html_stream: bytes, str
+
     -------------
     Example Usage
     -------------
@@ -92,11 +95,10 @@ class Parser:
         pretty.pprint(parser._parse_tokens_to_node_list())
 
     """
-    def __init__(self, html: str | bytes) -> None:
-        assert type(html) == bytes or type(html) == str, "HTML Stream must be bytes string or string"
-        self.__html_stream = html.decode("utf-8") if type(html) == bytes else html
-        self.__html_raw = html
-        self.__lexer = Lexer(html)
+    def __init__(self, html_stream: str | bytes) -> None:
+        assert type(html_stream) == bytes or type(html_stream) == str, "HTML Stream must be bytes string or string"
+        self.__html_stream = html_stream.decode("utf-8") if type(html_stream) == bytes else html_stream
+        self.__lexer = Lexer(self.__html_stream)
         self.__lexed = self.__lexer.lex()
         self.__index = 0
         self.__tags_list = []
@@ -104,9 +106,9 @@ class Parser:
     @property
     def html_raw(self) -> str:
         """
-        The original unprocessed stream of HTML code.
+        The original (decoded) stream of HTML code passed to the lexer.
         """
-        return self.__html_raw
+        return self.__html_stream
 
     @property
     def lexer(self) -> str:
