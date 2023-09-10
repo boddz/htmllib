@@ -6,6 +6,7 @@ HTMLLIB HTMLTree Interface
 A (kind of) tree like interface that acts as an API over the parsed HTML nodes generated from the parser.
 """
 
+from __future__ import annotations
 
 from .parser import (
     Parser,
@@ -59,7 +60,7 @@ class HTMLTree:
         self.__error_nodes = [node for node in self.__nodes_list if type(node) == HTMLErrorNode]
 
     @property
-    def html_stream(self) -> list:
+    def html_stream(self) -> str:
         """
         The raw HTML stream that was passed to this instance.
         """
@@ -78,6 +79,26 @@ class HTMLTree:
         All of the doctype/ comment tag nodes generated from parser, referenced in an iscolated list.
         """
         return self.__doctype_or_comment_nodes
+
+    @property
+    def doctypes_raw(self) -> list:
+        """
+        List of all raw doctype declarations found in the HTML as processed strings.
+        """
+        raw = []
+        for node in self.doctype_or_comment_nodes:
+            if len(node.text_raw) < 4: continue
+            if node.text_raw[:2] == "--" and node.text_raw[2:] == "--": continue
+            if "DOCTYPE".casefold() not in node.text_raw.strip()[:7].casefold(): continue
+            raw.append(node.text_raw.strip())
+        return raw
+
+    @property
+    def doctype_raw(self) -> str:
+        """
+        The most recent doctype declarations
+        """
+        return self.doctypes_raw[-1]
 
     @property
     def opening_tag_nodes(self) -> list:
