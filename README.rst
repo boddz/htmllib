@@ -24,7 +24,8 @@ Parser Process Flow Diagram
 Testing the Module
 ------------------
 
-This project has decent test coverage thus far using the ``unittest`` module from Python3's standard library.
+This project has decent test coverage thus far using the `unittest <https://docs.python.org/3/library/unittest.html>`_
+module from Python3's standard library.
 
 Run all tests with:
     .. code-block:: bash
