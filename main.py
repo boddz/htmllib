@@ -8,6 +8,7 @@ if __name__ == "__main__":
     # Manual testing code goes here ::
 
     htmltree = htmllib.HTMLTree("""
+        <!DOCTYPE html>
         <html lang="en" id="htmlid">
             <head>
                 <title>HTMLLIB Test Page</title>
@@ -32,3 +33,4 @@ if __name__ == "__main__":
     print(htmltree.search_tags_by_name("br", self_closing=True))
     print(htmltree.search_tags_by_id("find_me")[0].inner_html)
     print(htmltree.search_tags_by_class("main")[0].tag_name)
+    print(htmltree.doctype_raw)
