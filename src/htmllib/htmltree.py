@@ -176,5 +176,3 @@ class HTMLTree:
         """
         assert type(tag_class) == str, "You need to provide the class as a string"
         return self.search_tags_by_attr(("class", tag_class), self_closing=self_closing)
-
-    # TODO: below, search_self_closing_tags_by* methods.
